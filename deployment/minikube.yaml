@@ -1,0 +1,57 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: portal
+spec:
+  replicas: 1
+  revisionHistoryLimit: 1
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        run: portal
+    spec:
+      containers:
+        - name: portal 
+          image: 'lunchbadger/portal:dev'
+          # imagePullPolicy: Always
+          ports:
+            - containerPort: 4567
+          env:
+            - name: POLL_INTERVAL
+              value: '1000'
+            - name: BASE_PATH
+              value: 'http://demo-dev.lunchbadger.io'
+            - name: OPENAPI_URL
+              value: 'http://workspace-demo-dev:3000/explorer/swagger.json'
+      nodeSelector:
+        lunchbadger.com/node-type: worker
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: portal
+  labels:
+    run: portal
+spec:
+  ports:
+    - port: 80
+      targetPort: 4567
+      protocol: TCP
+  selector:
+    run: portal
+  type: ClusterIP
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: portal
+spec:
+  rules:
+  - host: portal-demo-dev.api.lunchbadger.com
+    http:
+      paths:
+      - backend:
+          serviceName: portal
+          servicePort: 80
